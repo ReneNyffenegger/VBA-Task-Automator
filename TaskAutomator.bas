@@ -8,22 +8,21 @@ end type ' }
 dim hookHandle  as long 
 dim hookStarted as boolean
 
-' dim ctrlIsDown as boolean
-' dim altIsDown  as bool
-
+dim   expectingCommand as boolean
+dim   lenCommand       as byte
 
 const nofKeyEventsStored = 20
 dim   lastKeyEvents(nofKeyEventsStored) as keyEv
 dim   curKeyEvent as byte
-dim   nextKeyEv  as keyEv
+dim   nextKeyEv   as keyEv
+
 
 sub StartTaskAutomator() ' {
 
     call initLastKeyevents()
     nextKeyEv.pressed = false
+    expectingCommand  = false
 
-
-    debug.print "TaskAutomator started"
 
     if hookStarted = false then
         hookHandle = SetWindowsHookEx(  _ 
@@ -42,6 +41,7 @@ sub StartTaskAutomator() ' {
         msgBox "Hook is already enabled"
     end if
 
+    debug.print "TaskAutomator started"
 end sub ' }
 
 sub storeKeyEvent(ev as keyEv) ' {
@@ -126,18 +126,77 @@ function LowLevelKeyboardProc(ByVal nCode As Long, ByVal wParam As Long, lParam 
 
     call storeKeyEvent(nextKeyEv)
 
-'   dim ev0, ev2 as keyEv
-
     dim ev0 as keyEv
     dim ev2 as keyEv
 
-    ev0 = getLastKeyEvent(0)
-    ev2 = getLastKeyEvent(2)
+    ev0 = getLastKeyEvent(1)
+    ev2 = getLastKeyEvent(3)
 
-    if ev0.pressed and ev0.vkCode = VK_RCONTROL and ev2.pressed and ev2.vkCode = VK_RCONTROL then
-       call Beep(440, 200)
+    if     ev0.pressed and ev0.vkCode = VK_RCONTROL and ev2.pressed and ev2.vkCode = VK_RCONTROL then
+
+           call Beep(440, 200)
+           expectingCommand = true
+           lenCommand       = 0
+
+    elseif expectingCommand then
+
+           lenCommand = lenCommand + 1
+
+           if lenCommand >= 4 then
+
+              if chr(ev2.vkCode) = "E" and chr(ev0.vkCode) = "X" then
+                call Beep(880, 200)
+
+                dim hWndExcel as long
+
+                  ' hWndExcel = FindWinow_WindowNameContains("neuer tab - google chrome")
+                  ' hWndExcel = FindWinow_WindowNameContains("chrome")
+                  ' hWndExcel = FindWinow_WindowNameContains("firefox")
+
+                  ' hWndExcel = FindWinow_WindowNameContains("Excel")
+                    hWndExcel = FindWinow_ClassName("XLMAIN")
+
+                if hWndExcel = 0 then
+                   debug.print "! Window not found"
+                end if
+
+                debug.print "hWnd = " & hWndExcel & ", parent: " & GetParent(hWndExcel) & ", parent parent: " & GetParent(GetParent(hWndExcel))
+
+
+                dim curForegroundThreadId as long
+                dim newForegroundThreadId as long
+
+                    curForegroundThreadId = GetWindowThreadProcessId(GetForegroundWindow(), byVal 0&)
+                    newForegroundThreadID = GetWindowThreadProcessId(hWndExcel            , byVal 0&)
+
+                dim  rc as long
+                call AttachThreadInput(curForegroundThreadId, newForegroundThreadID, true)
+                rc = SetForeGroundWindow(hWndExcel)
+                call AttachThreadInput(curForegroundThreadId, newForegroundThreadID, false)
+
+                if rc = 0 then
+                   debug.print "! Failed to SetForeGroundWindow"
+                else
+                   if IsIconic(hWndExcel) then
+                      call ShowWindow(hWndExcel, SW_RESTORE)
+                   else
+                      call ShowWindow(hWndExcel, SW_SHOW   )
+                   end if
+                end if
+
+'               debug.print "hWndExcel = " & hWndExcel
+
+'               call ShowWindow(hWndExcel, SW_SHOW)
+
+              end if
+
+              expectingCommand = false
+           else
+              LowLevelKeyboardProc = 1
+              exit function
+           end if
+
     end if
-
 
 '  '
 '  ' Apparently, the 5th bit is set if an ALT key was involved:
