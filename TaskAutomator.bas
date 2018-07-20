@@ -6,7 +6,7 @@ type keyEv ' {
 end type ' }
 
 dim hookHandle  as long
-dim hookStarted as boolean
+dim hhShell     as long
 
 dim   expectingCommand as boolean
 dim   commandSoFar     as string
@@ -17,29 +17,54 @@ dim   curKeyEvent as byte
 dim   nextKeyEv   as keyEv
 
 
+sub setHook(byRef hh as long, idHook as long, callBack as long) ' {
+
+    if hh <> 0 then
+       msgBox "Hook is already enabled"
+       exit sub
+    end if
+    
+ '  hh = SetWindowsHookEx(                 _
+ '       idHook                          , _
+ '       callBack                        , _
+ '       GetModuleHandle(vbNullString)   , _
+ '       GetCurrentThreadId )  
+    
+    hh = SetWindowsHookEx(                 _
+         idHook                          , _
+         callBack                        , _
+         GetModuleHandle(vbNullString)   , _
+         0 )    
+        
+    if hh = 0 then
+       msgBox "could not install hook, " & GetLastError()
+       exit sub
+    end if
+    
+    debug.print "Hook started, hh = " & hh
+
+end sub ' }
+
+sub unsetHook(byRef hh as long) ' {
+
+    if hh <> 0 then
+       UnhookWindowsHookEx hh
+       debug.print "Stopped hook, hh = " & hh       
+       hh = 0
+     end if
+
+end sub ' }
+
+
 sub StartTaskAutomator() ' {
 
     call initLastKeyevents()
     nextKeyEv.pressed = false
     expectingCommand  = false
 
-
-    if hookStarted = false then
-        hookHandle = SetWindowsHookEx(       _
-           WH_KEYBOARD_LL                  , _
-           addressOf LowLevelKeyboardProc  , _
-           application.hInstance           , _
-           0 )
-
-        if hookHandle <> 0 then
-           hookStarted = true
-        else
-           msgBox "Could not install hook"
-        end if
-
-    else
-        msgBox "Hook is already enabled"
-    end if
+    call setHook(hookHandle, WH_KEYBOARD_LL, addressOf LowLevelKeyboardProc)
+    
+  ' call setHook(hhShell, WH_SHELL, addressOf shellProc)
 
     debug.print "TaskAutomator started"
 end sub ' }
@@ -80,15 +105,12 @@ sub initLastKeyevents() ' {
         call storeKeyEvent(ev)
     next cnt
 
-
 end sub ' }
 
 public sub StopTaskAutomator() ' {
 
-    if hookStarted then
-       UnhookWindowsHookEx hookHandle
-       hookStarted = false
-    end if
+    call unsetHook(hookHandle)
+'   call unsetHook(hhShell   )
 
     cells.clear
 
@@ -181,7 +203,19 @@ function checkCommand(cmd as string) as boolean ' {
 
 end function ' }
 
-function LowLevelKeyboardProc(byVal nCode as Long, ByVal wParam as Long, lParam as KBDLLHOOKSTRUCT) as long ' {
+function ShellProc(byVal nCode as long, byVal wParam as long, lParam as long) ' {
+
+    debug.print "ShellProc"
+
+    if nCode = HSHELL_WINDOWCREATED then
+       debug.print "a Windows was created"
+    end if
+    
+    ShellProc = CallNextHookEx(0, nCode, wParam, ByVal lParam)
+
+end function ' }
+
+function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam as KBDLLHOOKSTRUCT) as long ' {
 
 '   dim upOrDown as string
 '   dim altKey   as boolean
@@ -192,13 +226,15 @@ function LowLevelKeyboardProc(byVal nCode as Long, ByVal wParam as Long, lParam 
        exit function
     end if
 
-    if lParam.vkCode = VK_ESCAPE then StopTaskAutomator
-
-    if lParam.vkCode >= cLng("&h090") and lParam.vkCode <= cLng("&h0fc") then
-       debug.print "lParam.vkCode = " & hex(lParam.vkCode)
-    else
-       debug.print chr(lParam.vkCode)
+    if isEventEqual(0, VK_PAUSE, false) then
+       StopTaskAutomator
     end if
+
+'   if lParam.vkCode >= cLng("&h090") and lParam.vkCode <= cLng("&h0fc") then
+'      debug.print "lParam.vkCode = " & hex(lParam.vkCode)
+'   else
+'      debug.print chr(lParam.vkCode)
+'   end if
 
 '   select case wParam
 '          case WM_KEYDOWN   : upOrDown = "keyDown"
@@ -244,11 +280,8 @@ function LowLevelKeyboardProc(byVal nCode as Long, ByVal wParam as Long, lParam 
               end if
            end if
 
-
-           if expectingCommand then
-              LowLevelKeyboardProc = 1
-              exit function
-           end if
+           LowLevelKeyboardProc = 1
+           exit function
 
     end if
 
