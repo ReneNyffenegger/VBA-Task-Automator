@@ -23,24 +23,24 @@ sub setHook(byRef hh as long, idHook as long, callBack as long) ' {
        msgBox "Hook is already enabled"
        exit sub
     end if
-    
+
  '  hh = SetWindowsHookEx(                 _
  '       idHook                          , _
  '       callBack                        , _
  '       GetModuleHandle(vbNullString)   , _
- '       GetCurrentThreadId )  
-    
+ '       GetCurrentThreadId )
+
     hh = SetWindowsHookEx(                 _
          idHook                          , _
          callBack                        , _
          GetModuleHandle(vbNullString)   , _
-         0 )    
-        
+         0 )
+
     if hh = 0 then
        msgBox "could not install hook, " & GetLastError()
        exit sub
     end if
-    
+
     debug.print "Hook started, hh = " & hh
 
 end sub ' }
@@ -49,12 +49,11 @@ sub unsetHook(byRef hh as long) ' {
 
     if hh <> 0 then
        UnhookWindowsHookEx hh
-       debug.print "Stopped hook, hh = " & hh       
+       debug.print "Stopped hook, hh = " & hh
        hh = 0
      end if
 
 end sub ' }
-
 
 sub StartTaskAutomator() ' {
 
@@ -63,7 +62,7 @@ sub StartTaskAutomator() ' {
     expectingCommand  = false
 
     call setHook(hookHandle, WH_KEYBOARD_LL, addressOf LowLevelKeyboardProc)
-    
+
   ' call setHook(hhShell, WH_SHELL, addressOf shellProc)
 
     debug.print "TaskAutomator started"
@@ -186,10 +185,29 @@ function checkCommand(cmd as string) as boolean ' {
        exit function
     end if
 
+    if cmd = "CERT" then
+       dim r as RECT
+       dim hWndSec as long
+       hWndSec = FindWindow_ClassName_WindowText("#32770", "Windows Security")
+       debug.print("hWndSec = " & hWndSec)
+       r = GetWindowRect_(hWndSec)
+       call msgBox(r.left)
+       checkCommand = false
+       exit function
+    end if
+
     if cmd = "EXCL" then
        dim hWndExcel as long
-       hWndExcel = FindWinow_ClassName("XLMAIN")
+       hWndExcel = FindWindow_ClassName("XLMAIN")
        goToWindow hWndExcel
+       checkCommand = false
+       exit function
+    end if
+
+    if cmd = "HELP" then
+       dim hWndHelpLine as long
+       hWndHelpLine = FindWindow_WindowNameContains("ClassicDesk Prod 6.2")
+       goToWindow hWndHelpLine
        checkCommand = false
        exit function
     end if
@@ -210,7 +228,7 @@ function ShellProc(byVal nCode as long, byVal wParam as long, lParam as long) ' 
     if nCode = HSHELL_WINDOWCREATED then
        debug.print "a Windows was created"
     end if
-    
+
     ShellProc = CallNextHookEx(0, nCode, wParam, ByVal lParam)
 
 end function ' }
