@@ -5,11 +5,11 @@ type keyEv ' {
      vkCode     as byte     ' VK_*
 end type ' }
 
-dim hookHandle  as long 
+dim hookHandle  as long
 dim hookStarted as boolean
 
 dim   expectingCommand as boolean
-dim   lenCommand       as byte
+dim   commandSoFar     as string
 
 const nofKeyEventsStored = 20
 dim   lastKeyEvents(nofKeyEventsStored) as keyEv
@@ -25,7 +25,7 @@ sub StartTaskAutomator() ' {
 
 
     if hookStarted = false then
-        hookHandle = SetWindowsHookEx(  _ 
+        hookHandle = SetWindowsHookEx(       _
            WH_KEYBOARD_LL                  , _
            addressOf LowLevelKeyboardProc  , _
            application.hInstance           , _
@@ -79,7 +79,7 @@ sub initLastKeyevents() ' {
     for cnt = 0 to nofKeyEventsStored - 1
         call storeKeyEvent(ev)
     next cnt
-        
+
 
 end sub ' }
 
@@ -96,7 +96,92 @@ public sub StopTaskAutomator() ' {
 
 end sub ' }
 
-function LowLevelKeyboardProc(ByVal nCode As Long, ByVal wParam As Long, lParam As KBDLLHOOKSTRUCT) As Long ' {
+function isEventEqual(n as byte, vk as byte, pressed as boolean) as boolean ' {
+
+    dim ev as keyEv
+    ev  = getLastKeyEvent(n)
+    if ev.pressed = pressed and ev.vkCode = vk  then
+       isEventEqual = true
+    else
+       isEventEqual = false
+    end if
+
+end function ' }
+
+function altGrPressed() as boolean ' {
+
+    if isEventEqual(3, VK_LCONTROL, true ) and _
+       isEventEqual(2, VK_RMENU   , true ) and _
+       isEventEqual(1, VK_LCONTROL, false) and _
+       isEventEQual(0, VK_RMENU   , false) then
+          altGrPressed = true
+    else
+          altGrPressed = false
+    end if
+
+end function ' }
+
+function cmdInitSequence() as boolean
+    cmdInitSequence = altGrPressed
+end function
+
+sub goToWindow(hWnd as long) ' {
+
+    dim curForegroundThreadId as long
+    dim newForegroundThreadId as long
+
+    curForegroundThreadId = GetWindowThreadProcessId(GetForegroundWindow(), byVal 0&)
+    newForegroundThreadID = GetWindowThreadProcessId(hWnd            , byVal 0&)
+
+    dim  rc as long
+    call AttachThreadInput(curForegroundThreadId, newForegroundThreadID, true)
+    rc = SetForeGroundWindow(hWnd)
+    call AttachThreadInput(curForegroundThreadId, newForegroundThreadID, false)
+
+    if rc = 0 then
+       debug.print "! Failed to SetForeGroundWindow"
+    else
+       if IsIconic(hWnd) then
+          call ShowWindow(hWnd, SW_RESTORE)
+       else
+          call ShowWindow(hWnd, SW_SHOW   )
+       end if
+    end if
+
+    debug.print "hWnd = " & hWnd
+
+    call ShowWindow(hWnd, SW_SHOW)
+
+end sub ' }
+
+function checkCommand(cmd as string) as boolean ' {
+
+    debug.print("Check Command " & cmd)
+
+    if cmd = "STOP" then
+       call stopTaskAutomator
+       checkCommand = false
+       exit function
+    end if
+
+    if cmd = "EXCL" then
+       dim hWndExcel as long
+       hWndExcel = FindWinow_ClassName("XLMAIN")
+       goToWindow hWndExcel
+       checkCommand = false
+       exit function
+    end if
+
+    if len(cmd) = 4 then
+       checkCommand = false
+       exit function
+    end if
+
+    checkCommand = true
+
+end function ' }
+
+function LowLevelKeyboardProc(byVal nCode as Long, ByVal wParam as Long, lParam as KBDLLHOOKSTRUCT) as long ' {
 
 '   dim upOrDown as string
 '   dim altKey   as boolean
@@ -108,6 +193,12 @@ function LowLevelKeyboardProc(ByVal nCode As Long, ByVal wParam As Long, lParam 
     end if
 
     if lParam.vkCode = VK_ESCAPE then StopTaskAutomator
+
+    if lParam.vkCode >= cLng("&h090") and lParam.vkCode <= cLng("&h0fc") then
+       debug.print "lParam.vkCode = " & hex(lParam.vkCode)
+    else
+       debug.print chr(lParam.vkCode)
+    end if
 
 '   select case wParam
 '          case WM_KEYDOWN   : upOrDown = "keyDown"
@@ -126,72 +217,35 @@ function LowLevelKeyboardProc(ByVal nCode As Long, ByVal wParam As Long, lParam 
 
     call storeKeyEvent(nextKeyEv)
 
-    dim ev0 as keyEv
-    dim ev2 as keyEv
 
-    ev0 = getLastKeyEvent(1)
-    ev2 = getLastKeyEvent(3)
-
-    if     ev0.pressed and ev0.vkCode = VK_RCONTROL and ev2.pressed and ev2.vkCode = VK_RCONTROL then
+    if     cmdInitSequence then
+           debug.print "starting new command"
 
            call Beep(440, 200)
            expectingCommand = true
-           lenCommand       = 0
+           commandSoFar     = ""
+
+           LowLevelKeyboardProc = 1
+           exit function
 
     elseif expectingCommand then
 
-           lenCommand = lenCommand + 1
+           dim ev as keyEv
+           dim c  as string
 
-           if lenCommand >= 4 then
+           ev = getLastKeyEvent(0)
 
-              if chr(ev2.vkCode) = "E" and chr(ev0.vkCode) = "X" then
-                call Beep(880, 200)
-
-                dim hWndExcel as long
-
-                  ' hWndExcel = FindWinow_WindowNameContains("neuer tab - google chrome")
-                  ' hWndExcel = FindWinow_WindowNameContains("chrome")
-                  ' hWndExcel = FindWinow_WindowNameContains("firefox")
-
-                  ' hWndExcel = FindWinow_WindowNameContains("Excel")
-                    hWndExcel = FindWinow_ClassName("XLMAIN")
-
-                if hWndExcel = 0 then
-                   debug.print "! Window not found"
-                end if
-
-                debug.print "hWnd = " & hWndExcel & ", parent: " & GetParent(hWndExcel) & ", parent parent: " & GetParent(GetParent(hWndExcel))
-
-
-                dim curForegroundThreadId as long
-                dim newForegroundThreadId as long
-
-                    curForegroundThreadId = GetWindowThreadProcessId(GetForegroundWindow(), byVal 0&)
-                    newForegroundThreadID = GetWindowThreadProcessId(hWndExcel            , byVal 0&)
-
-                dim  rc as long
-                call AttachThreadInput(curForegroundThreadId, newForegroundThreadID, true)
-                rc = SetForeGroundWindow(hWndExcel)
-                call AttachThreadInput(curForegroundThreadId, newForegroundThreadID, false)
-
-                if rc = 0 then
-                   debug.print "! Failed to SetForeGroundWindow"
-                else
-                   if IsIconic(hWndExcel) then
-                      call ShowWindow(hWndExcel, SW_RESTORE)
-                   else
-                      call ShowWindow(hWndExcel, SW_SHOW   )
-                   end if
-                end if
-
-'               debug.print "hWndExcel = " & hWndExcel
-
-'               call ShowWindow(hWndExcel, SW_SHOW)
-
+           if not ev.pressed then
+              if chr(ev.vkCode) >= "A" and chr(ev.vkCode) <= "Z" then
+                  commandSoFar = commandSoFar + chr(ev.vkCode)
+                  expectingCommand = checkCommand(commandSoFar)
+              else
+                 expectingCommand = false
               end if
+           end if
 
-              expectingCommand = false
-           else
+
+           if expectingCommand then
               LowLevelKeyboardProc = 1
               exit function
            end if
@@ -200,7 +254,7 @@ function LowLevelKeyboardProc(ByVal nCode As Long, ByVal wParam As Long, lParam 
 
 '  '
 '  ' Apparently, the 5th bit is set if an ALT key was involved:
-'  ' 
+'  '
 '    altKey = lParam.flags and 32
 '
 '    if ( lParam.vkCode >= asc("A") ) and ( lParam.vkCode <= asc("Z") ) then
