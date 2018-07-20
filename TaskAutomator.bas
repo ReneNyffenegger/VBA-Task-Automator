@@ -131,20 +131,33 @@ end function ' }
 
 function altGrPressed() as boolean ' {
 
-    if isEventEqual(3, VK_LCONTROL, true ) and _
-       isEventEqual(2, VK_RMENU   , true ) and _
-       isEventEqual(1, VK_LCONTROL, false) and _
-       isEventEQual(0, VK_RMENU   , false) then
-          altGrPressed = true
+    if GetComputerName_ = "THINKPAD" then
+      
+      if isEventEqual(1, VK_RMENU   , true ) and _
+         isEventEQual(0, VK_RMENU   , false) then
+            altGrPressed = true
+       else
+          altGrPressed   = false
+       end if
+
     else
+
+      if isEventEqual(3, VK_LCONTROL, true ) and _
+         isEventEqual(2, VK_RMENU   , true ) and _
+         isEventEqual(1, VK_LCONTROL, false) and _
+         isEventEQual(0, VK_RMENU   , false) then
+            altGrPressed = true
+       else
           altGrPressed = false
+       end if
+
     end if
 
 end function ' }
 
-function cmdInitSequence() as boolean
+function cmdInitSequence() as boolean ' {
     cmdInitSequence = altGrPressed
-end function
+end function ' }
 
 sub goToWindow(hWnd as long) ' {
 
@@ -248,11 +261,11 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
        StopTaskAutomator
     end if
 
-'   if lParam.vkCode >= cLng("&h090") and lParam.vkCode <= cLng("&h0fc") then
-'      debug.print "lParam.vkCode = " & hex(lParam.vkCode)
-'   else
-'      debug.print chr(lParam.vkCode)
-'   end if
+    if lParam.vkCode >= cLng("&h090") and lParam.vkCode <= cLng("&h0fc") then
+       debug.print "lParam.vkCode = " & hex(lParam.vkCode)
+    else
+       debug.print chr(lParam.vkCode)
+    end if
 
 '   select case wParam
 '          case WM_KEYDOWN   : upOrDown = "keyDown"
