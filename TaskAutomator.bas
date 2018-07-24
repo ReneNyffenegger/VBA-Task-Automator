@@ -132,7 +132,7 @@ end function ' }
 function altGrPressed() as boolean ' {
 
     if GetComputerName_ = "THINKPAD" then
-      
+
       if isEventEqual(1, VK_RMENU   , true ) and _
          isEventEQual(0, VK_RMENU   , false) then
             altGrPressed = true
@@ -164,8 +164,13 @@ sub goToWindow(hWnd as long) ' {
     dim curForegroundThreadId as long
     dim newForegroundThreadId as long
 
+    if hWnd = 0 then
+       debug.print "goToWindow, hWnd = 0"
+       exit sub
+    end if
+
     curForegroundThreadId = GetWindowThreadProcessId(GetForegroundWindow(), byVal 0&)
-    newForegroundThreadID = GetWindowThreadProcessId(hWnd            , byVal 0&)
+    newForegroundThreadID = GetWindowThreadProcessId(hWnd                 , byVal 0&)
 
     dim  rc as long
     call AttachThreadInput(curForegroundThreadId, newForegroundThreadID, true)
@@ -186,6 +191,12 @@ sub goToWindow(hWnd as long) ' {
 
     call ShowWindow(hWnd, SW_SHOW)
 
+end sub ' }
+
+sub goToWindowVBA() ' {
+    dim hWnd as long
+    hWnd = FindWindow("wndclass_desked_gsk", 0)
+    goToWindow hWnd
 end sub ' }
 
 function checkCommand(cmd as string) as boolean ' {
@@ -217,15 +228,31 @@ function checkCommand(cmd as string) as boolean ' {
        exit function
     end if
 
+    if cmd = "VBA" then
+       goToWindowVBA
+       checkCommand = false
+       exit function
+    end if
+
     if cmd = "HELP" then
        dim hWndHelpLine as long
        hWndHelpLine = FindWindow_WindowNameContains("ClassicDesk Prod 6.2")
+
+       debug.print "hWndHelpLine = " & hWndHelpLine
+
+       if hWndHelpLine = 0 then
+          debug.print "hWndHelpLine = 0, trying to open executable"
+          shellOpen "C:\ProgramData\Microsoft\AppV\Client\Integration\57DDD50C-7190-4CC4-9D25-365DC4F0E272\Root\VFS\ProgramFilesX86\helpLine\ClassicDesk.exe"
+          checkCommand = false
+          exit function
+       end if
+
        goToWindow hWndHelpLine
        checkCommand = false
        exit function
     end if
 
-    if len(cmd) = 4 then
+    if len(cmd) >= 4 then
        checkCommand = false
        exit function
     end if
@@ -259,6 +286,12 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
 
     if isEventEqual(0, VK_PAUSE, false) then
        StopTaskAutomator
+    end if
+
+    if expectingCommand then
+       debug.print "expecting command"
+    else
+       debug.print "not expecting command"
     end if
 
     if lParam.vkCode >= cLng("&h090") and lParam.vkCode <= cLng("&h0fc") then
@@ -307,7 +340,7 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
                   commandSoFar = commandSoFar + chr(ev.vkCode)
                   expectingCommand = checkCommand(commandSoFar)
               else
-                 expectingCommand = false
+                  expectingCommand = false
               end if
            end if
 
@@ -363,7 +396,7 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
 '
 '    if altKey then cells(1,5) = "alt" else cells(1,5) = "-"
 
-
+    debug.print "Calling next LowLevelKeyboardProc"
     LowLevelKeyboardProc = CallNextHookEx(0, nCode, wParam, ByVal lParam)
 
 end function ' }
