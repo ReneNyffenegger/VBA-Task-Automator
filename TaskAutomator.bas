@@ -201,10 +201,17 @@ end sub ' }
 
 function checkCommand(cmd as string) as boolean ' {
 
-    debug.print("Check Command " & cmd)
+'   debug.print("Check Command " & cmd)
 
     if cmd = "STOP" then
        call stopTaskAutomator
+       checkCommand = false
+       exit function
+    end if
+
+    if cmd = "BLA" then
+'      SendInputText "BlaBla01++"
+       SendInputText "xxfghIjKlMnaFgHiJKLMNAmoremoremore"
        checkCommand = false
        exit function
     end if
@@ -288,16 +295,16 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
        StopTaskAutomator
     end if
 
-    if expectingCommand then
-       debug.print "expecting command"
-    else
-       debug.print "not expecting command"
-    end if
+'   if expectingCommand then
+'      debug.print "expecting command"
+'   else
+'      debug.print "not expecting command"
+'   end if
 
     if lParam.vkCode >= cLng("&h090") and lParam.vkCode <= cLng("&h0fc") then
        debug.print "lParam.vkCode = " & hex(lParam.vkCode)
     else
-       debug.print chr(lParam.vkCode)
+       debug.print "lParam.vkCode = " & chr(lParam.vkCode)
     end if
 
 '   select case wParam
@@ -326,6 +333,7 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
            commandSoFar     = ""
 
            LowLevelKeyboardProc = 1
+           LowLevelKeyboardProc = CallNextHookEx(0, nCode, wParam, ByVal lParam)
            exit function
 
     elseif expectingCommand then
@@ -396,7 +404,7 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
 '
 '    if altKey then cells(1,5) = "alt" else cells(1,5) = "-"
 
-    debug.print "Calling next LowLevelKeyboardProc"
+'   debug.print "Calling next LowLevelKeyboardProc"
     LowLevelKeyboardProc = CallNextHookEx(0, nCode, wParam, ByVal lParam)
 
 end function ' }
