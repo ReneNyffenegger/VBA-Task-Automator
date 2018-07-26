@@ -15,6 +15,7 @@ const nofKeyEventsStored = 20
 dim   lastKeyEvents(nofKeyEventsStored) as keyEv
 dim   curKeyEvent as byte
 dim   nextKeyEv   as keyEv
+dim   isSendingINput as boolean
 
 
 sub setHook(byRef hh as long, idHook as long, callBack as long) ' {
@@ -60,6 +61,7 @@ sub StartTaskAutomator() ' {
     call initLastKeyevents()
     nextKeyEv.pressed = false
     expectingCommand  = false
+    isSendingInput    = false
 
     call setHook(hookHandle, WH_KEYBOARD_LL, addressOf LowLevelKeyboardProc)
 
@@ -210,8 +212,10 @@ function checkCommand(cmd as string) as boolean ' {
     end if
 
     if cmd = "BLA" then
-'      SendInputText "BlaBla01++"
-       SendInputText "xxfghIjKlMnaFgHiJKLMNAmoremoremore"
+       isSendingInput = true
+       SendInputText "BlaBla01++"
+'      SendInputText "xxfghIjKlMnaFgHiJKLMNAmoremoremore"
+       isSendingInput = false
        checkCommand = false
        exit function
     end if
@@ -294,6 +298,12 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
 '   dim char     as string
 
     if nCode <> HC_ACTION then
+       LowLevelKeyboardProc = CallNextHookEx(0, nCode, wParam, byVal lParam)
+       exit function
+    end if
+    
+    if isSendingInput then
+       debug.print "Is sending input"
        LowLevelKeyboardProc = CallNextHookEx(0, nCode, wParam, byVal lParam)
        exit function
     end if
