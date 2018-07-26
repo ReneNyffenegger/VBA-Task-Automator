@@ -195,7 +195,7 @@ end sub ' }
 
 sub goToWindowVBA() ' {
     dim hWnd as long
-    hWnd = FindWindow("wndclass_desked_gsk", 0)
+    hWnd = FindWindow("wndclass_desked_gsk", vbNullString)
     goToWindow hWnd
 end sub ' }
 
@@ -229,7 +229,8 @@ function checkCommand(cmd as string) as boolean ' {
 
     if cmd = "EXCL" then
        dim hWndExcel as long
-       hWndExcel = FindWindow_ClassName("XLMAIN")
+       hWndExcel = FindWindow("XLMAIN", vbNullString)
+     ' hWndExcel = FindWindow_ClassName("XLMAIN")
        goToWindow hWndExcel
        checkCommand = false
        exit function
@@ -281,6 +282,12 @@ function ShellProc(byVal nCode as long, byVal wParam as long, lParam as long) ' 
 end function ' }
 
 function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam as KBDLLHOOKSTRUCT) as long ' {
+'
+'   Return value:
+'     MSDN says: If the hook procedure processed the message, it may return a nonzero
+'                value to prevent the system from passing the message to the rest of
+'                the hook chain or the target window procedure.
+'
 
 '   dim upOrDown as string
 '   dim altKey   as boolean
@@ -332,7 +339,8 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
            expectingCommand = true
            commandSoFar     = ""
 
-           LowLevelKeyboardProc = 1
+         ' 2018-07-25
+         ' LowLevelKeyboardProc = 1
            LowLevelKeyboardProc = CallNextHookEx(0, nCode, wParam, ByVal lParam)
            exit function
 
