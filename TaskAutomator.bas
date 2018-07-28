@@ -135,8 +135,10 @@ function altGrPressed() as boolean ' {
 
     if GetComputerName_ = "THINKPAD" then
 
-      if isEventEqual(1, VK_RMENU   , true ) and _
-         isEventEQual(0, VK_RMENU   , false) then
+ '    if isEventEqual(1, VK_RMENU   , true ) and _
+ '       isEventEQual(0, VK_RMENU   , false) then
+      if isEventEqual(1, VK_RCONTROL, true ) and _
+         isEventEQual(0, VK_RCONTROL, false) then
             altGrPressed = true
        else
           altGrPressed   = false
@@ -211,10 +213,9 @@ function checkCommand(cmd as string) as boolean ' {
        exit function
     end if
 
-    if cmd = "BLA" then
+    if cmd = "XXX" then
        isSendingInput = true
        SendInputText "BlaBla01++"
-'      SendInputText "xxfghIjKlMnaFgHiJKLMNAmoremoremore"
        isSendingInput = false
        checkCommand = false
        exit function
@@ -285,6 +286,68 @@ function ShellProc(byVal nCode as long, byVal wParam as long, lParam as long) ' 
 
 end function ' }
 
+function keyUpOrDown(wParam as long) as string ' {
+
+    select case wParam
+           case WM_KEYDOWN   : keyUpOrDown = "keyDown"
+           case WM_KEYUP     : keyUpOrDown = "keyUp"
+           case WM_SYSKEYDOWN: keyUpOrDown = "sysDown"
+           case WM_SYSKEYUP  : keyUpOrDown = "sysUp"
+    end select
+
+end function ' }
+
+function keyChar(vkCode as long) as string ' {
+
+    if   ( ( vkCode >= asc("A") ) and ( vkCode <= asc("Z") ) ) or _
+         ( ( vkCode >= asc("0") ) and ( vkCode <= asc("9") ) )    then
+
+      keyChar = chr(vkCode)
+
+    else
+
+      select case vkCode ' {
+             case VK_TAB      : keyChar = "tab"
+             case VK_ESCAPE   : keyChar = "esc"
+             case VK_PAUSE    : keyChar = "pause"
+             case VK_PRIOR    : keyChar = "prior"
+             case VK_NEXT     : keyChar = "next"
+
+             case VK_LCONTROL : keyChar = "ctrl-L"
+             case VK_RCONTROL : keyChar = "ctrl-R"
+
+             case VK_LMENU    : keyChar = "menu-L"
+             case VK_RMENU    : keyChar = "menu-R"
+
+             case VK_RIGHT    : keyChar = ">>"
+             case VK_LEFT     : keyChar = "<<"
+             case VK_UP       : keyChar = "^^"
+             case VK_DOWN     : keyChar = "vv"
+
+             case VK_LSHIFT   : keyChar = "shift-L"
+             case VK_RSHIFT   : keyChar = "shift-R"
+
+             case VK_LWIN     : keyChar = "win-L"
+             case VK_RWIN     : keyChar = "win-R"
+             
+             case VK_F1 to VK_F24 : keyChar = "F" & (24 - VK_F24 + vkCode)
+
+             case VK_OEM_PLUS : keyChar = "OEM +"
+
+             case VK_RETURN   : keyChar = "enter"
+             case else        : keyChar = "0x" & hex(vkCode)
+      end select ' }
+
+'   if lParam.vkCode >= cLng("&h090") and lParam.vkCode <= cLng("&h0fc") then
+'      debug.print "lParam.vkCode hex = " & hex(lParam.vkCode)
+'   else
+'      debug.print "lParam.vkCode chr = " & chr(lParam.vkCode)
+'   end if
+
+    end if
+
+end function ' }
+
 function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam as KBDLLHOOKSTRUCT) as long ' {
 '
 '   Return value:
@@ -293,20 +356,34 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
 '                the hook chain or the target window procedure.
 '
 
-'   dim upOrDown as string
+    dim upOrDown as string
 '   dim altKey   as boolean
-'   dim char     as string
+    dim char     as string
+
+    dim keyEventString as string
 
     if nCode <> HC_ACTION then
        LowLevelKeyboardProc = CallNextHookEx(0, nCode, wParam, byVal lParam)
        exit function
     end if
+
+    upOrDown = keyUpOrDown(wParam       )
+    char     = keyChar    (lParam.vkCode)
+
+    keyEventString = char & " " & upOrDown
+  '
+  ' Apparently, the 5th bit is set if an ALT key was involved:
+  '
+  ' altKey = lParam.flags and 32
+
+'   debug.print char & " " & upOrDown
     
     if isSendingInput then
-       debug.print "Is sending input"
+       debug.print keyEventString & " - Is sending input"
        LowLevelKeyboardProc = CallNextHookEx(0, nCode, wParam, byVal lParam)
        exit function
     end if
+    debug.print keyEventString
 
     if isEventEqual(0, VK_PAUSE, false) then
        StopTaskAutomator
@@ -318,18 +395,7 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
 '      debug.print "not expecting command"
 '   end if
 
-    if lParam.vkCode >= cLng("&h090") and lParam.vkCode <= cLng("&h0fc") then
-       debug.print "lParam.vkCode = " & hex(lParam.vkCode)
-    else
-       debug.print "lParam.vkCode = " & chr(lParam.vkCode)
-    end if
 
-'   select case wParam
-'          case WM_KEYDOWN   : upOrDown = "keyDown"
-'          case WM_KEYUP     : upOrDown = "keyUp"
-'          case WM_SYSKEYDOWN: upOrDown = "sysDown"
-'          case WM_SYSKEYUP  : upOrDown = "sysUp"
-'   end select
 
     if wParam = WM_KEYDOWN or wParam = WM_SYSKEYDOWN then
        nextKeyEv.pressed = true
@@ -340,7 +406,6 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
     nextKeyEv.vkCode = lParam.vkCode
 
     call storeKeyEvent(nextKeyEv)
-
 
     if     cmdInitSequence then
            debug.print "starting new command"
@@ -374,42 +439,6 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
            exit function
 
     end if
-
-'  '
-'  ' Apparently, the 5th bit is set if an ALT key was involved:
-'  '
-'    altKey = lParam.flags and 32
-'
-'    if ( lParam.vkCode >= asc("A") ) and ( lParam.vkCode <= asc("Z") ) then
-'       char = chr(lParam.vkCode)
-'
-'    else
-'
-'      select case lParam.vkCode ' {
-'             case VK_ESCAPE   : char = "esc"
-'
-'             case VK_LCONTROL : char = "ctrl L"
-'             case VK_RCONTROL : char = "ctrl R"
-'
-'             case VK_LMENU    : char = "menu L"
-'             case VK_RMENU    : char = "menu R"
-'
-'             case VK_RIGHT    : char = ">>"
-'             case VK_LEFT     : char = "<<"
-'             case VK_UP       : char = "^^"
-'             case VK_DOWN     : char = "vv"
-'
-'             case VK_LSHIFT   : char = "shift L"
-'             case VK_RSHIFT   : char = "shift R"
-'
-'             case VK_LWIN     : char = "win L"
-'             case VK_RWIN     : char = "win R"
-'
-'             case VK_RETURN   : char = "enter"
-'             case else        : char = "?"
-'      end select ' }
-'
-'    end if
 '
 '  '
 '  ' Display what the user has pressed.
