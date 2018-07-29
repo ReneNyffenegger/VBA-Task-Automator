@@ -197,11 +197,17 @@ sub goToWindow(hWnd as long) ' {
 
 end sub ' }
 
-sub goToWindowVBA() ' {
+sub goToWindowWithClassAndCaption(class as string, caption as string) ' {
     dim hWnd as long
-    hWnd = FindWindow("wndclass_desked_gsk", vbNullString)
+    hWnd = FindWindow(class, caption)
     goToWindow hWnd
 end sub ' }
+
+' sub goToWindowVBA() ' {
+'     dim hWnd as long
+'     hWnd = FindWindow("wndclass_desked_gsk", vbNullString)
+'     goToWindow hWnd
+' end sub ' }
 
 function checkCommand(cmd as string) as boolean ' {
 
@@ -213,7 +219,7 @@ function checkCommand(cmd as string) as boolean ' {
        exit function
     end if
 
-    if cmd = "XXX" then
+    if cmd = "BLA" then
        isSendingInput = true
        SendInputText "BlaBla01++"
        isSendingInput = false
@@ -232,20 +238,27 @@ function checkCommand(cmd as string) as boolean ' {
        exit function
     end if
 
-    if cmd = "EXCL" then
-       dim hWndExcel as long
-       hWndExcel = FindWindow("XLMAIN", vbNullString)
-     ' hWndExcel = FindWindow_ClassName("XLMAIN")
-       goToWindow hWndExcel
+    if cmd = "EXCL" then ' {
+       goToWindowWithClassAndCaption "XLMAIN", vbNullString
+'      dim hWndExcel as long
+'      hWndExcel = FindWindow("XLMAIN", vbNullString)
+'    ' hWndExcel = FindWindow_ClassName("XLMAIN")
+'      goToWindow hWndExcel
        checkCommand = false
        exit function
-    end if
+    end if ' }
 
-    if cmd = "VBA" then
-       goToWindowVBA
+    if cmd = "VBA" then ' {
+       goToWindowWithClassAndCaption "wndclass_desked_gsk", vbNullString
        checkCommand = false
        exit function
-    end if
+    end if ' }
+
+    if cmd = "NOTE" then ' {
+       goToWindowWithClassAndCaption "Notepad", vbNullString
+       checkCommand = false
+       exit function
+    end if ' }
 
     if cmd = "HELP" then
        dim hWndHelpLine as long
@@ -329,7 +342,7 @@ function keyChar(vkCode as long) as string ' {
 
              case VK_LWIN     : keyChar = "win-L"
              case VK_RWIN     : keyChar = "win-R"
-             
+
              case VK_F1 to VK_F24 : keyChar = "F" & (24 - VK_F24 + vkCode)
 
              case VK_OEM_PLUS : keyChar = "OEM +"
@@ -377,7 +390,7 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
   ' altKey = lParam.flags and 32
 
 '   debug.print char & " " & upOrDown
-    
+
     if isSendingInput then
        debug.print keyEventString & " - Is sending input"
        LowLevelKeyboardProc = CallNextHookEx(0, nCode, wParam, byVal lParam)
