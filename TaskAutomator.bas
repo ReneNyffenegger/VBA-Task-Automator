@@ -15,7 +15,7 @@ const nofKeyEventsStored = 20
 dim   lastKeyEvents(nofKeyEventsStored) as keyEv
 dim   curKeyEvent as byte
 dim   nextKeyEv   as keyEv
-dim   isSendingINput as boolean
+dim   isSendingInput as boolean
 
 
 sub setHook(byRef hh as long, idHook as long, callBack as long) ' {
@@ -219,15 +219,15 @@ function checkCommand(cmd as string) as boolean ' {
        exit function
     end if
 
-    if cmd = "BLA" then
+    if cmd = "BLA" then ' {
        isSendingInput = true
        SendInputText "BlaBla01++"
        isSendingInput = false
        checkCommand = false
        exit function
-    end if
+    end if ' }
 
-    if cmd = "CERT" then
+    if cmd = "CERT" then ' {
        dim r as RECT
        dim hWndSec as long
        hWndSec = FindWindow_ClassName_WindowText("#32770", "Windows Security")
@@ -236,7 +236,16 @@ function checkCommand(cmd as string) as boolean ' {
        call msgBox(r.left)
        checkCommand = false
        exit function
-    end if
+    end if ' }
+
+    if cmd = "FG" then ' {
+       debug.print "foreground Window is: " & GetForegroundWindow()
+       debug.print "a: " & GetKeyboardLayout(0)
+       debug.print "b: " & GetKeyboardLayout(GetWindowThreadProcessId(GetForegroundWindow(), 0))
+
+       checkCommand = false
+       exit function
+    end if ' }
 
     if cmd = "EXCL" then ' {
        goToWindowWithClassAndCaption "XLMAIN", vbNullString
@@ -423,7 +432,7 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
     if     cmdInitSequence then
            debug.print "starting new command"
 
-           call Beep(440, 200)
+         ' call Beep(440, 200)
            expectingCommand = true
            commandSoFar     = ""
 
