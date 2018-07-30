@@ -221,7 +221,7 @@ function checkCommand(cmd as string) as boolean ' {
 
     if cmd = "BLA" then ' {
        isSendingInput = true
-       SendInputText "BlaBla01++"
+       SendInputText "BlaBla01++\n"
        isSendingInput = false
        checkCommand = false
        exit function
@@ -264,12 +264,21 @@ function checkCommand(cmd as string) as boolean ' {
     end if ' }
 
     if cmd = "NOTE" then ' {
-       goToWindowWithClassAndCaption "Notepad", vbNullString
+       dim hWndNotepad as long
+       hWndNotepad = FindWindow("Notepad++", vbNullString)
+       if hWndNotepad <> 0 then
+          goToWindow hWndNotepad
+       else
+          debug.print "Notepad window not found, opening it"
+          shellOpen "C:\Users\RNyffenegger\AppData\Local\Microsoft\AppV\Client\Integration\F1272FE5-4D0A-4FA1-903F-AAE67B75C89E\Root\VFS\ProgramFilesX86\Notepad++\notepad++.exe"
+
+       end if
+     ' goToWindowWithClassAndCaption "Notepad", vbNullString
        checkCommand = false
        exit function
     end if ' }
 
-    if cmd = "HELP" then
+    if cmd = "HELP" then ' {
        dim hWndHelpLine as long
        hWndHelpLine = FindWindow_WindowNameContains("ClassicDesk Prod 6.2")
 
@@ -285,7 +294,20 @@ function checkCommand(cmd as string) as boolean ' {
        goToWindow hWndHelpLine
        checkCommand = false
        exit function
-    end if
+    end if ' }
+
+    if cmd = "CARK" then ' { Cyberark
+       shellOpen "https://cyberark.wmhub.tq84.net/PasswordVault/auth/pki/"
+       checkCommand = false
+       exit function
+    end if ' }
+
+    if cmd = "SQLD" then ' { SQL Developer
+       goToWindowWithClassAndCaption "SunAwtFrame", vbNullString
+       checkCommand = false
+       exit function
+    end if ' }
+
 
     if len(cmd) >= 4 then
        checkCommand = false
@@ -401,11 +423,11 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
 '   debug.print char & " " & upOrDown
 
     if isSendingInput then
-       debug.print keyEventString & " - Is sending input"
+     ' debug.print keyEventString & " - Is sending input"
        LowLevelKeyboardProc = CallNextHookEx(0, nCode, wParam, byVal lParam)
        exit function
     end if
-    debug.print keyEventString
+  ' debug.print keyEventString
 
     if isEventEqual(0, VK_PAUSE, false) then
        StopTaskAutomator
@@ -429,10 +451,11 @@ function LowLevelKeyboardProc(byVal nCode as Long, byVal wParam as long, lParam 
 
     call storeKeyEvent(nextKeyEv)
 
+
     if     cmdInitSequence then
            debug.print "starting new command"
 
-         ' call Beep(440, 200)
+           call Beep(440, 200)
            expectingCommand = true
            commandSoFar     = ""
 
