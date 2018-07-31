@@ -50,7 +50,7 @@ sub unsetHook(byRef hh as long) ' {
 
     if hh <> 0 then
        UnhookWindowsHookEx hh
-       debug.print "Stopped hook, hh = " & hh
+     ' debug.print "Stopped hook, hh = " & hh
        hh = 0
      end if
 
@@ -110,14 +110,15 @@ end sub ' }
 
 public sub StopTaskAutomator() ' {
 
-    call unsetHook(hookHandle)
+    if unsetHook(hookHandle) then
+       debug.print "Task Automator stopped"
+    else
+       debug.print "Task Automator was already stopped"
+    end if
 '   call unsetHook(hhShell   )
 
     cells.clear
-
-    debug.print "Tasks Automator finished"
-
-end sub ' }
+end function ' }
 
 function isEventEqual(n as byte, vk as byte, pressed as boolean) as boolean ' {
 
@@ -227,13 +228,23 @@ function checkCommand(cmd as string) as boolean ' {
        exit function
     end if ' }
 
+    if cmd = "INCA" then ' {
+       isSendingInput = true
+       SendInputText "Incident analysis\n"
+       isSendingInput = false
+       checkCommand = false
+       exit function
+    end if ' }
+
     if cmd = "CERT" then ' {
        dim r as RECT
        dim hWndSec as long
-       hWndSec = FindWindow_ClassName_WindowText("#32770", "Windows Security")
-       debug.print("hWndSec = " & hWndSec)
+     ' hWndSec = FindWindow_ClassName_WindowText("#32770", "Windows Security")
+       hWndSec = FindWindow("#32770", "Windows Security")
        r = GetWindowRect_(hWndSec)
-       call msgBox(r.left)
+       debug.print("hWndSec = " & hWndSec & ", left: " & r.left & ", top: " & r.top & ", right: " & r.right & ", bottom: " & r.bottom)
+
+     ' call msgBox(r.left)
        checkCommand = false
        exit function
     end if ' }
