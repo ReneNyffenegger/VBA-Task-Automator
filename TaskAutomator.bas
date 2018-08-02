@@ -118,7 +118,7 @@ public sub StopTaskAutomator() ' {
 '   call unsetHook(hhShell   )
 
     cells.clear
-end function ' }
+end sub ' }
 
 function isEventEqual(n as byte, vk as byte, pressed as boolean) as boolean ' {
 
