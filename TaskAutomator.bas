@@ -115,9 +115,9 @@ public sub StopTaskAutomator() ' {
     else
        debug.print "Task Automator was already stopped"
     end if
-'   call unsetHook(hhShell   )
+ '  call unsetHook(hhShell   )
 
-    cells.clear
+ '  cells.clear
 end sub ' }
 
 function isEventEqual(n as byte, vk as byte, pressed as boolean) as boolean ' {
