@@ -46,7 +46,7 @@ sub setHook(byRef hh as long, idHook as long, callBack as long) ' {
 
 end sub ' }
 
-sub unsetHook(byRef hh as long) ' {
+function unsetHook(byRef hh as long) as boolean ' {
 
     if hh <> 0 then
        UnhookWindowsHookEx hh
@@ -54,7 +54,8 @@ sub unsetHook(byRef hh as long) ' {
        hh = 0
      end if
 
-end sub ' }
+     unsetHook = false
+end function ' }
 
 sub StartTaskAutomator() ' {
 
@@ -311,6 +312,10 @@ function checkCommand(cmd as string) as boolean ' {
        shellOpen "https://cyberark.wmhub.tq84.net/PasswordVault/auth/pki/"
        checkCommand = false
        exit function
+    end if ' }
+
+    if cmd = "SMCL" then ' { Avaloq's so called Smart Client
+       shellOpen "L:\AvaloqSC\Avaloq_Test_DEV\SmartClientLauncher\SmartClientLauncher.exe", "contactcenter", "L:\AvaloqSC\Avaloq_Test_DEV\SmartClientLauncher"
     end if ' }
 
     if cmd = "SQLD" then ' { SQL Developer
