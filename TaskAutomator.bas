@@ -52,6 +52,8 @@ function unsetHook(byRef hh as long) as boolean ' {
        UnhookWindowsHookEx hh
      ' debug.print "Stopped hook, hh = " & hh
        hh = 0
+       unsetHook = true
+       exit function
      end if
 
      unsetHook = false
@@ -323,6 +325,18 @@ function checkCommand(cmd as string) as boolean ' {
        checkCommand = false
        exit function
     end if ' }
+
+    if cmd = "MVL" then ' { Move Window to left monitor
+       dim hWndToMove as long
+       hWndToMove = GetForegroundWindow
+       MoveWindow HWndToMove, 1921, 0, 1920, 1080, true
+    end if' }
+
+    if cmd = "MVA" then ' { Move Window to right monitor
+       dim hWndToMoveR as long
+       hWndToMoveR = GetForegroundWindow
+       MoveWindow HWndToMoveR, 0, 0, 1920, 1080, true
+    end if' }
 
 
     if len(cmd) >= 4 then
