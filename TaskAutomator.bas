@@ -73,6 +73,11 @@ sub StartTaskAutomator() ' {
     debug.print "TaskAutomator started"
 end sub ' }
 
+sub debugTA(txt as string) ' {
+    selection.typeText txt
+  selection.typeParagraph
+end sub ' }
+
 sub storeKeyEvent(ev as keyEv) ' {
     curKeyEvent = curKeyEvent + 1
     if curKeyEvent >= nofKeyEventsStored then curKeyEvent = 0
@@ -201,6 +206,12 @@ sub goToWindow(hWnd as long) ' {
 
 end sub ' }
 
+sub SendInputText_TA(txt as string) ' {
+    isSendingInput = true
+    SendInputText    txt
+    isSendingInput = false
+end sub ' }
+
 sub goToWindowWithClassAndCaption(class as string, caption as string) ' {
     dim hWnd as long
     hWnd = FindWindow(class, caption)
@@ -278,16 +289,19 @@ function checkCommand(cmd as string) as boolean ' {
     end if ' }
 
     if cmd = "NOTE" then ' {
+       debugTA "NOTE"
        dim hWndNotepad as long
        hWndNotepad = FindWindow("Notepad++", vbNullString)
+
        if hWndNotepad <> 0 then
+          debugTA "hWndNotepad <> 0 -> goToWindow hWndNotepad"
           goToWindow hWndNotepad
        else
           debug.print "Notepad window not found, opening it"
           shellOpen "C:\Users\RNyffenegger\AppData\Local\Microsoft\AppV\Client\Integration\F1272FE5-4D0A-4FA1-903F-AAE67B75C89E\Root\VFS\ProgramFilesX86\Notepad++\notepad++.exe"
-
        end if
      ' goToWindowWithClassAndCaption "Notepad", vbNullString
+
        checkCommand = false
        exit function
     end if ' }
@@ -344,7 +358,8 @@ function checkCommand(cmd as string) as boolean ' {
        exit function
     end if
 
-    checkCommand = true
+  ' checkCommand = true
+    checkCommand = checkTaskAutomatorCommand(cmd)
 
 end function ' }
 
