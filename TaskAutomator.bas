@@ -17,6 +17,8 @@ dim   curKeyEvent as byte
 dim   nextKeyEv   as keyEv
 dim   isSendingInput as boolean
 
+dim   dbg as dbgFile
+
 
 sub setHook(byRef hh as long, idHook as long, callBack as long) ' {
 
@@ -24,12 +26,6 @@ sub setHook(byRef hh as long, idHook as long, callBack as long) ' {
        msgBox "Hook is already enabled"
        exit sub
     end if
-
- '  hh = SetWindowsHookEx(                 _
- '       idHook                          , _
- '       callBack                        , _
- '       GetModuleHandle(vbNullString)   , _
- '       GetCurrentThreadId )
 
     hh = SetWindowsHookEx(                 _
          idHook                          , _
@@ -50,7 +46,6 @@ function unsetHook(byRef hh as long) as boolean ' {
 
     if hh <> 0 then
        UnhookWindowsHookEx hh
-     ' debug.print "Stopped hook, hh = " & hh
        hh = 0
        unsetHook = true
        exit function
@@ -68,9 +63,12 @@ sub StartTaskAutomator() ' {
 
     call setHook(hookHandle, WH_KEYBOARD_LL, addressOf LowLevelKeyboardProc)
 
-  ' call setHook(hhShell, WH_SHELL, addressOf shellProc)
+  if dbg is nothing then
+     set dbg = new dbgFile
+     dbg.init("f:\task-automator\debug.out")
+  end if
 
-    debug.print "TaskAutomator started"
+    dbg.text "TaskAutomator started"
 end sub ' }
 
 sub debugTA(txt as string) ' {
@@ -123,9 +121,11 @@ public sub StopTaskAutomator() ' {
     else
        debug.print "Task Automator was already stopped"
     end if
- '  call unsetHook(hhShell   )
 
- '  cells.clear
+  if not dbg is nothing then
+     set dbg = nothing
+  end if
+
 end sub ' }
 
 function isEventEqual(n as byte, vk as byte, pressed as boolean) as boolean ' {
@@ -174,6 +174,8 @@ end function ' }
 
 sub goToWindow(hWnd as long) ' {
 
+    dbg.indent "goToWindow"
+
     dim curForegroundThreadId as long
     dim newForegroundThreadId as long
 
@@ -190,19 +192,24 @@ sub goToWindow(hWnd as long) ' {
     rc = SetForeGroundWindow(hWnd)
     call AttachThreadInput(curForegroundThreadId, newForegroundThreadID, false)
 
-    if rc = 0 then
-       debug.print "! Failed to SetForeGroundWindow"
-    else
+'   if rc = 0 then
+  dbg.text "SetForegroundWindow: rc = "  & rc
+ '  debug.print "! Failed to SetForeGroundWindow"
+ '  else
        if IsIconic(hWnd) then
+          dbg.text "hWnd is iconic"
           call ShowWindow(hWnd, SW_RESTORE)
        else
+          dbg.text "hWnd is not iconic"
           call ShowWindow(hWnd, SW_SHOW   )
        end if
-    end if
+ '  end if
 
-    debug.print "hWnd = " & hWnd
+    dbg.text "hWnd = " & hWnd
 
     call ShowWindow(hWnd, SW_SHOW)
+
+  dbg.dedent
 
 end sub ' }
 
